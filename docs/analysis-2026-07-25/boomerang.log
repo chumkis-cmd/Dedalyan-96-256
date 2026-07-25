@@ -1,0 +1,72 @@
+============================================================
+Dedalyan boomerang / rectangle / yoyo
+============================================================
+   key 910523353440b13d...   quartets per (alpha,delta) 400,000   processes 12
+   random-permutation return rate: 2^-96 = 1.26e-29
+
+-- 1. Single-bit alpha and delta -----------------------------
+   a returned quartet at a rate far above 2^-96 is a distinguisher
+   rounds  3  best  50000 returns of 50,000  rate 1.000e+00  000000000001:000000000000 / 000000000000:000000000001
+   rounds  4  best      0 returns of 50,000  rate 0.000e+00  
+   rounds  5  best      0 returns of 50,000  rate 0.000e+00  
+   rounds  6  best      0 returns of 50,000  rate 0.000e+00  
+   rounds  7  best      0 returns of 50,000  rate 0.000e+00  
+   rounds  8  best      0 returns of 50,000  rate 0.000e+00  
+
+-- 2. Confirmation on fresh quartets -------------------------
+   noise does not survive a rerun with a different seed
+   rounds  3  first 50000/50,000  rerun 800000/800,000  rate 1.000e+00  CONFIRMED
+   rounds  4  nothing to confirm
+   rounds  5  nothing to confirm
+   rounds  6  nothing to confirm
+   rounds  7  nothing to confirm
+   rounds  8  nothing to confirm
+
+-- 3. Search over 48 random (alpha, delta) pairs -------------
+   rounds  4  0 of 48 pairs returned at least one quartet; best count 0
+   rounds  5  0 of 48 pairs returned at least one quartet; best count 0
+   rounds  6  0 of 48 pairs returned at least one quartet; best count 0
+   rounds  7  0 of 48 pairs returned at least one quartet; best count 0
+   rounds  8  0 of 48 pairs returned at least one quartet; best count 0
+
+-- 4. Yoyo game (structural, no probabilities involved) ------
+   swap ciphertext halves between two texts sharing a half,
+   decrypt, and check whether the shared half survives
+   rounds  2         0 / 200,000 = 0.000e+00   (random 3.55e-15)  no
+   rounds  3         0 / 200,000 = 0.000e+00   (random 3.55e-15)  no
+   rounds  4         0 / 200,000 = 0.000e+00   (random 3.55e-15)  no
+   rounds  5         0 / 200,000 = 0.000e+00   (random 3.55e-15)  no
+   rounds  6         0 / 200,000 = 0.000e+00   (random 3.55e-15)  no
+   rounds  7         0 / 200,000 = 0.000e+00   (random 3.55e-15)  no
+   rounds  8         0 / 200,000 = 0.000e+00   (random 3.55e-15)  no
+
+-- 5. Amplified boomerang (rectangle) estimate ---------------
+   a rectangle attack over m texts yields about m^2/2 * p^2 q^2 / 2^n
+   right quartets; with no measurable p, q the estimate is vacuous,
+   which is itself the result worth recording
+   rounds  3  observed boomerang probability 1.000e+00 -> about 2^0.5 texts for one rectangle quartet
+   rounds  4  no returned quartet: probability below 2.00e-05, rectangle not applicable
+   rounds  5  no returned quartet: probability below 2.00e-05, rectangle not applicable
+   rounds  6  no returned quartet: probability below 2.00e-05, rectangle not applicable
+   rounds  7  no returned quartet: probability below 2.00e-05, rectangle not applicable
+   rounds  8  no returned quartet: probability below 2.00e-05, rectangle not applicable
+
+-- Verdict -- boomerang --------------------------------------
+    rounds   best deviation   noise floor  detected  witness
+         3         1.000000      0.000080       YES  000000000001:000000000000
+         4         0.000000      0.000080        no  
+         5         0.000000      0.000080        no  
+         6         0.000000      0.000080        no  
+         7         0.000000      0.000080        no  
+         8         0.000000      0.000080        no  
+   [NOTE] boomerang: last detected at round 3; margin 13 of 16 rounds
+
+-- Security margin -------------------------------------------
+   boomerang                          last detected round: 3
+   [NOTE] deepest distinguisher found: round 3 of 16   margin 13 rounds (81%)
+   Reminder: absence of a distinguisher here is NOT a security proof.
+   These are bounded searches, not exhaustive cryptanalysis.
+
+============================================================
+0 passed, 0 failed, 0 warnings   (1.1s)
+============================================================

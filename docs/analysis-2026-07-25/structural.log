@@ -1,0 +1,74 @@
+============================================================
+Dedalyan structural analysis
+============================================================
+   processes 12   scale x1   rounds 16
+
+-- 1. Is Lab a bijection? ------------------------------------
+   Lab splits into six independent 8-bit maps on nibble pairs (j, j+6),
+   so each can be enumerated exhaustively: 256 inputs, no sampling.
+   keys tested                     : 20,000
+   pair-map image size (of 256)    : min 128, mean 222.2, max 256
+   keys with a bijective Lab       : 2 (0.010%)
+   mean image density of Lab (48 b): 0.4622
+   entropy lost per Lab application: 1.113 bits
+   [NOTE] Lab is NOT a permutation for essentially every key.
+   Consequences, in order of importance:
+     (a) the key schedule state contracts. Iterating a random
+         non-injective map k times leaves an image of about
+         2N/k, so after 20 steps the 192-bit state still spans
+         ~2^188.7 values. Not a practical concern.
+     (b) the key schedule is NOT uniquely invertible, which
+         HELPS against meet-in-the-middle on the schedule.
+     (c) subkeys are not exactly uniform. Measured avalanche
+         and collision tests do not detect it at 2^-48 scale.
+   This is a documentation gap in the spec, not a break:
+   section 6 never claims Lab is a permutation, but a reader
+   naturally assumes a 'pair of permutations' composes into one.
+   key-schedule state after 20 steps: ~2^188.7 of 2^192 reachable
+
+-- 2. Invariant subspaces ------------------------------------
+   an invariant subspace attack needs a coset that the cipher maps
+   to itself for some class of keys; we test the natural candidates
+   [PASS] no key preserves: low nibble of R fixed to 0   0 of 2,000 keys
+   [PASS] no key preserves: low byte of R fixed to 0   0 of 2,000 keys
+   [PASS] no key preserves: low nibble of L and R zero   0 of 2,000 keys
+   [PASS] no key preserves: top nibble of L fixed to 0   0 of 2,000 keys
+   [PASS] no key preserves: R = 0 entirely   0 of 2,000 keys
+
+-- 3. Complementation property (the DES-style relation) ------
+   DES satisfies E(~P, ~K) = ~E(P, K), which halves brute force;
+   with modular addition in F this should not survive
+   [PASS] E(~P, ~K) != ~E(P, K)   0 of 2000 matches
+   mean Hamming distance from the complement relation: 47.99 of 96 (random = 48)
+
+-- 4. Fixed points E(P) == P ---------------------------------
+   a random permutation of 2^96 elements has on average one fixed
+   point in total, so any hit in a sample of this size is a red flag
+   [PASS] no fixed point in 5,000,000 random blocks   0 found; random expectation 6.31e-23
+
+-- 5. Structured keys ----------------------------------------
+   keys an attacker would try first: all-zero, all-ones, repeating
+   bytes, K_L = 0 (labyrinth from a degenerate seed)
+   all zero                 distinct subkeys 16/16   mean |E(P) xor P| 49.99%   k0 9864a848b6d4
+   all ones                 distinct subkeys 16/16   mean |E(P) xor P| 49.94%   k0 ca95167bd5e2
+   0x55 repeated            distinct subkeys 16/16   mean |E(P) xor P| 50.07%   k0 59a88e0486ca
+   0xAA repeated            distinct subkeys 16/16   mean |E(P) xor P| 49.99%   k0 53aafe04034a
+   K_L = 0, rest random     distinct subkeys 16/16   mean |E(P) xor P| 50.04%   k0 efef310f54e1
+   K_L = ones, rest zero    distinct subkeys 16/16   mean |E(P) xor P| 50.01%   k0 ca36857a8661
+   K_0..K_3 all equal       distinct subkeys 16/16   mean |E(P) xor P| 49.96%   k0 8a5879341e7d
+   counter pattern          distinct subkeys 16/16   mean |E(P) xor P| 50.02%   k0 352b543e645d
+   worst labyrinth over 500 000 keys: 10 fixed points of 32 (7 such keys)
+   [PASS] no key yields a near-identity labyrinth   worst 10/32
+
+-- 6. Slide-attack preconditions -----------------------------
+   a slide attack needs the round transform to repeat: identical
+   subkeys AND identical round constants across rounds
+   [PASS] all 16 round constants RC_i are distinct   16 distinct
+   [PASS] no key produces two identical subkeys (50 000 keys)   0 keys
+   Conclusion: the round function differs at every round even for a
+   hypothetical key with repeated subkeys, so the classic slide
+   attack has no self-similar structure to exploit.
+
+============================================================
+10 passed, 0 failed, 0 warnings   (1.3s)
+============================================================

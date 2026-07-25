@@ -1,0 +1,23 @@
+# Сборка C-части
+build/
+*.obj
+*.exp
+*.lib
+*.pdb
+*.ilk
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Логи криптоанализа и экспортированные потоки
+attacks/reports/
+*.log
+stream.bin
+*.bin
+
+# Снимки прогонов криптоанализа лежат в docs/ и версионируются;
+# attacks/reports/ -- рабочий каталог, туда пишет каждый запуск.
+!docs/analysis-*/*.log

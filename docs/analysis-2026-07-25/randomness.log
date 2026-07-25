@@ -1,0 +1,52 @@
+============================================================
+Dedalyan randomness battery (NIST SP 800-22 subset)
+============================================================
+   keys 8   keystream per key 16 MiB   rounds 16
+   p < 0.01 on an isolated test is normal; a defect repeats
+
+-- Per-key p-values ------------------------------------------
+    key    monobit  block-fre       runs  longest-r  matrix-ra        dft   serial-1   serial-2  approx-en  cusum-fwd  cusum-rev
+      0    0.16415    0.04279    0.79381    0.33353    0.03447    0.22157    0.43740    0.67052    0.01899    0.11579    0.20584
+      1    0.27639    0.84040    0.96109    0.45524    0.60362    0.17146    0.62259    0.36697    0.78188    0.56333    0.86560
+      2    0.93574    0.60855    0.63546    0.82775    0.42208    0.21487    0.49258    0.65214    0.46566    0.93554    0.88949
+      3    0.99959    0.62174    0.82323    0.60240    0.26847    0.44408    0.42023    0.53028    0.96255    0.09920    0.20481
+      4    0.21966    0.18650    0.17571    0.14848    0.95250    0.73615    0.95969    0.99852    0.59125    0.65079    0.59652
+      5    0.98581    0.99197    0.66768    0.18572    0.03909    0.96712    0.72732    0.56023    0.92239    0.59783    0.88083
+      6    0.18461    0.87948    0.35668    0.20825    0.35742    0.46571    0.58830    0.22842    0.09007    0.98601    0.94291
+      7    0.08147    0.37162    0.56953    0.63822    0.70590    0.40158    0.41044    0.37047    0.05948    0.78528    0.55952
+
+-- Per-test summary ------------------------------------------
+   monobit          min p  0.08147   p < 0.01 in 0/8 keys
+   block-freq       min p  0.04279   p < 0.01 in 0/8 keys
+   runs             min p  0.17571   p < 0.01 in 0/8 keys
+   longest-run      min p  0.14848   p < 0.01 in 0/8 keys
+   matrix-rank      min p  0.03447   p < 0.01 in 0/8 keys
+   dft              min p  0.17146   p < 0.01 in 0/8 keys
+   serial-1         min p  0.41044   p < 0.01 in 0/8 keys
+   serial-2         min p  0.22842   p < 0.01 in 0/8 keys
+   approx-entropy   min p  0.01899   p < 0.01 in 0/8 keys
+   cusum-fwd        min p  0.09920   p < 0.01 in 0/8 keys
+   cusum-rev        min p  0.20481   p < 0.01 in 0/8 keys
+   [PASS] no test fails systematically across keys
+
+-- Second-order test: are the p-values uniform? --------------
+   collect every p-value and check uniformity on [0,1] with a
+   chi-square over 10 bins -- catches subtle skew a single run misses
+   88 p-values, chi2 = 6.09 (df = 9), p = 0.73079
+   histogram: 8 8 9 6 10 9 11 6 7 14
+   [PASS] p-values are uniformly distributed   p = 0.73079
+
+-- Sensitivity control: the battery must fail a weak cipher --
+   rounds 1: 11/11 tests fail (min p = 0.00e+00)
+   rounds 2: 1/11 tests fail (min p = 4.68e-04)
+   rounds 3: 0/11 tests fail (min p = 5.16e-02)
+   [PASS] control runs recorded above
+
+-- External batteries ----------------------------------------
+   this module covers the cheap tests; for the full picture export
+   a stream and run dieharder / NIST STS / PractRand:
+     python attacks/randomness.py --export stream.bin --export-mb 512
+
+============================================================
+3 passed, 0 failed, 0 warnings   (34.5s)
+============================================================

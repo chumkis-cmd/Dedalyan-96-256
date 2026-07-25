@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+# Отменяем предыдущий прогон той же ветки: держать очередь незачем.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    name: Linux (gcc, Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.9", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build the C part
+        run: make
+
+      - name: C test vectors (spec section 8)
+        run: ./build/test_vectors
+
+      - name: Python test suite
+        run: python tests/run_all.py --profile quick --jobs 2
+
+      - name: Cryptanalysis smoke test
+        run: python attacks/run_all.py --profile quick --jobs 2 --only structural,integral,boomerang
+
+  windows:
+    name: Windows (MSVC)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build the C part
+        shell: pwsh
+        run: .\build.ps1
+
+      - name: C test vectors (spec section 8)
+        run: .\build\test_vectors.exe
+
+      - name: Python test suite
+        run: python tests\run_all.py --profile quick --jobs 2
+
+  pure-python:
+    name: Pure Python (no C backend)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      # Реализация обязана работать без numpy, scipy и без собранной
+      # библиотеки: dedalyan.py и cli.py заявлены как чистая стандартная
+      # библиотека, и это надо проверять, а не декларировать.
+      - name: Self-check with no third-party packages at all
+        run: |
+          python dedalyan.py
+          python cli.py block --key-hex 000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f --plaintext 0123456789abcdef01234567
+
+      - name: Test vectors and pitfalls without the C backend
+        run: |
+          python tests/test_vectors.py
+          python tests/test_pitfalls.py

@@ -1,0 +1,25 @@
+# Нормализация переводов строк. Без этого файлы, отредактированные на
+# Windows, приезжают в репозиторий с CRLF, и на Linux ломается shebang,
+# а diff показывает изменение каждой строки.
+* text=auto eol=lf
+
+# Скрипты PowerShell и cmd остаются с CRLF: некоторые старые версии
+# PowerShell спотыкаются на LF в here-string.
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Makefile обязан быть с табами и LF.
+Makefile text eol=lf
+
+# Двоичное -- не трогать.
+*.png binary
+*.bin binary
+*.dll binary
+*.so  binary
+*.exe binary
+
+# Подсветка и статистика языков на GitHub: спецификация и логи -- это
+# документация, а не исходный код проекта.
+*.md linguist-documentation
+docs/** linguist-documentation

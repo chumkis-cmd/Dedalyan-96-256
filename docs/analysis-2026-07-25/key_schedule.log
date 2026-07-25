@@ -1,0 +1,71 @@
+============================================================
+Dedalyan key-schedule attacks
+============================================================
+   random keys 400,000   processes 12
+   collected 400,000 x 16 subkeys (51.2 MB)
+
+-- 1. Injectivity of K -> (k_0 .. k_15) ----------------------
+   768 output bits from a 256-bit key: collisions would mean
+   equivalent keys, and the effective key space is smaller than 2^256
+   [PASS] no two keys share the whole subkey vector   0 collisions in 400,000
+   
+   per-subkey collisions are EXPECTED: 48-bit values, birthday at 2^24
+   k[ 0]:      0 collisions, birthday expectation      0.0, ratio  0.00
+   k[ 1]:      0 collisions, birthday expectation      0.0, ratio  0.00
+   k[ 8]:      0 collisions, birthday expectation      0.0, ratio  0.00
+   k[15]:      0 collisions, birthday expectation      0.0, ratio  0.00
+   [PASS] per-subkey collision counts match the birthday bound   ratio near 1.0 means uniform 48-bit output
+
+-- 2. Meet-in-the-middle on the schedule ---------------------
+   the schedule state is 4 x 48 = 192 bits, plus 64 bits of K_L
+   that select the labyrinth tables. Inverting one step requires
+   the tables, so K_L must be guessed first.
+   
+   Lab image density (48-bit word)   : 0.4488
+   preimages per Lab output (average): 2.23
+   cost of guessing K_L              : 2^64
+   cost of inverting 20 steps        : about 2^23.1 branchings
+   [NOTE] Because Lab is not injective, backward stepping branches instead of resolving. A meet-in-the-middle over the schedule costs more than 2^64 and does not threaten a 256-bit key.
+   Note this is a consequence of a property the spec never states:
+   Lab is not a permutation. Here it happens to help.
+
+-- 3. Correlations between subkey bits -----------------------
+   if bit a of k_i predicted bit b of k_j, an attacker could guess
+   one subkey and derive part of another
+   k[ 0] vs k[ 1]: max |corr| over 48x48 bit pairs = 0.00817
+   k[ 0] vs k[ 4]: max |corr| over 48x48 bit pairs = 0.00950
+   k[ 0] vs k[ 8]: max |corr| over 48x48 bit pairs = 0.00706
+   k[ 0] vs k[15]: max |corr| over 48x48 bit pairs = 0.00752
+   k[ 7] vs k[ 8]: max |corr| over 48x48 bit pairs = 0.00779
+   k[14] vs k[15]: max |corr| over 48x48 bit pairs = 0.00894
+   [PASS] no subkey bit pair correlates beyond 0.01108   worst 0.00950 at (0, 4, 19, 24)
+
+-- 4. Per-bit bias of subkeys --------------------------------
+   mean over all subkey bits: 0.500048
+   max |bias| over 48 bit positions: 0.000584 (noise floor 0.001037)
+   [PASS] no subkey bit position is biased   worst bit 1
+
+-- 5. Role of K_L (64 bits -> two 16-element permutations) ---
+   K_L can address at most 2^64 table pairs, but there are
+   (16!)^2 = 2^88.5 possible pairs,
+   so the labyrinth space is capped by the key, not by the tables
+   200,000 random K_L -> 200,000 distinct table pairs (0 collisions, birthday expectation 1.08e-09)
+   [PASS] distinct K_L give distinct labyrinths   0 collisions
+   
+   [PASS] fixed K_L, varying K_0..K_3 still gives distinct schedules   0 collisions in 2000
+   [PASS] fixed K_0..K_3, varying K_L still gives distinct schedules   0 collisions in 2000
+   [PASS] a single K_L bit flips ~50% of all subkey bits   49.94%
+
+-- 6. Recovering the schedule state from known subkeys -------
+   k_i = S_{i mod 4} + RC_i, so a known k_i exposes exactly ONE
+   48-bit state word -- and only as it stood at step i.
+   [PASS] each k_i exposes exactly one state word of step i
+   [PASS] four consecutive subkeys do NOT compose into a state snapshot   only 1/4 words coincide with the real step-3 state
+   This is a real strength of the design: an attacker who learns
+   several subkeys still never sees the 192-bit state at one instant.
+   [PASS] a FULL state snapshot plus K_L does predict every later subkey   so the schedule protects the state, not the forward direction
+   [NOTE] Summary: k_i leaks one word per step, never a full snapshot. Going backwards additionally needs K_L and branches through non-injective Lab. No shortcut below 2^256 was found.
+
+============================================================
+11 passed, 0 failed, 0 warnings   (6.2s)
+============================================================

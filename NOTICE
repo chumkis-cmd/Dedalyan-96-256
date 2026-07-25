@@ -1,0 +1,12 @@
+Dedalyan-96/256
+Copyright 2026 Danila Sobyanin (Собянин Данила Кириллович)
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This product includes a research block cipher that has NOT undergone
+independent cryptanalysis. It is published for study and review, not for
+protecting real data. See section 0 of dedalyan-spec.md and the "Границы
+проверенного" section of README.md.
+
+The Argon2id key derivation used by demo.py comes from the argon2-cffi
+package (MIT licence) and is not part of this work.

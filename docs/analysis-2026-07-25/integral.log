@@ -1,0 +1,84 @@
+============================================================
+Dedalyan integral cryptanalysis and algebraic degree
+============================================================
+   key 910523353440b13d...   max subspace dimension k = 24 (2^24 = 16,777,216 encryptions per probe)
+   trials per (k, rounds): 8   processes: 12
+
+-- 1. Zero-sum over subspaces of the L half (canonical Feistel integral) --
+   sum == 0 for every trial  =>  integral distinguisher at that round count
+   a random permutation gives a zero sum with probability 2^-96, so even one clean zero counts
+     k      r1      r2      r3      r4      r5      r6      r7      r8
+     2     8/8     0/8     0/8     0/8     0/8     0/8     0/8     0/8
+     6     8/8     0/8     0/8     0/8     0/8     0/8     0/8     0/8
+    10     8/8     0/8     0/8     0/8     0/8     0/8     0/8     0/8
+    14     8/8     0/8     0/8     0/8     0/8     0/8     0/8     0/8
+    18     8/8     0/8     0/8     0/8     0/8     0/8     0/8     0/8
+    22     8/8     0/8     0/8     0/8     0/8     0/8     0/8     0/8
+   
+   same table for the R half (expected to die at round 1):
+   r1:0/8  r2:0/8  r3:0/8  r4:0/8
+
+-- Deepest zero-sum by subspace dimension --------------------
+   k =  2: balanced through round 1
+   k =  6: balanced through round 1
+   k = 10: balanced through round 1
+   k = 14: balanced through round 1
+   k = 18: balanced through round 1
+   k = 22: balanced through round 1
+   [NOTE] deepest integral distinguisher: round 1 using k = 2 active bits (2^2 chosen plaintexts)
+   [NOTE] margin: 15 of 16 rounds
+
+-- 2. Algebraic degree per round -----------------------------
+   an order-k derivative vanishes iff the degree is BELOW k, so the
+   informative quantity is the LARGEST k with a non-zero sum: it
+   gives degree >= k. We scan k downwards and stop at the first hit.
+    rounds    degree lower bound  note
+         1                     1  order 2 and above all vanish
+         2                 >= 24  saturated at the tested ceiling; true degree may be higher
+         3                 >= 24  saturated at the tested ceiling; true degree may be higher
+         4                 >= 24  saturated at the tested ceiling; true degree may be higher
+         5                 >= 24  saturated at the tested ceiling; true degree may be higher
+         6                 >= 24  saturated at the tested ceiling; true degree may be higher
+         7                 >= 24  saturated at the tested ceiling; true degree may be higher
+         8                 >= 24  saturated at the tested ceiling; true degree may be higher
+
+-- 3. Nibble-saturation integrals ----------------------------
+   saturating whole nibbles is the classical integral setup and
+   often reaches one round deeper than arbitrary bit sets
+   1 saturated nibbles (k =  4): balanced through round 1
+   2 saturated nibbles (k =  8): balanced through round 1
+   3 saturated nibbles (k = 12): balanced through round 1
+   4 saturated nibbles (k = 16): balanced through round 1
+   5 saturated nibbles (k = 20): balanced through round 1
+   6 saturated nibbles (k = 24): balanced through round 1
+
+-- 4. Partial zero-sums (per output bit) ---------------------
+   even when the full block sum is non-zero, individual output bits
+   may still be balanced -- a weaker but usable distinguisher
+   rounds  3, k = 24:  1 of 96 output bits always balanced over 16 trials (random expectation 1.46e-03)
+   rounds  4, k = 24:  0 of 96 output bits always balanced over 16 trials (random expectation 1.46e-03)
+   rounds  5, k = 24:  0 of 96 output bits always balanced over 16 trials (random expectation 1.46e-03)
+   rounds  6, k = 24:  0 of 96 output bits always balanced over 16 trials (random expectation 1.46e-03)
+   rounds  7, k = 24:  0 of 96 output bits always balanced over 16 trials (random expectation 1.46e-03)
+   rounds  8, k = 24:  0 of 96 output bits always balanced over 16 trials (random expectation 1.46e-03)
+
+-- Verdict -- integral (zero-sum) distinguisher --------------
+    rounds   best deviation   noise floor  detected  witness
+         1         1.000000      0.000000       YES  k = 2
+   [NOTE] integral (zero-sum) distinguisher: last detected at round 1; margin 15 of 16 rounds
+
+-- Security margin -------------------------------------------
+   integral (zero-sum) distinguisher  last detected round: 1
+   [NOTE] deepest distinguisher found: round 1 of 16   margin 15 rounds (94%)
+   Reminder: absence of a distinguisher here is NOT a security proof.
+   These are bounded searches, not exhaustive cryptanalysis.
+
+-- Interpretation --------------------------------------------
+   An integral distinguisher at round d means: with 2^k chosen
+   plaintexts an attacker distinguishes d-round Dedalyan from a
+   random permutation. Key recovery typically adds 2-3 rounds on
+   top of the distinguisher, so compare d + 3 against 16.
+
+============================================================
+0 passed, 0 failed, 0 warnings   (50.1s)
+============================================================

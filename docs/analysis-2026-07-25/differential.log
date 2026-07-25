@@ -1,0 +1,118 @@
+============================================================
+Dedalyan differential cryptanalysis
+============================================================
+   key 910523353440b13d...   samples/difference 200,000   processes 12
+   analysing rounds 1..8 of 16
+
+-- 1. Single-bit input differences (96 x 96 bias matrix) -----
+    rounds    max bias      noise    ratio   #above  worst (din -> out bit)
+         1    0.500000   0.005451    91.73     7853  000000000000:000000000001 -> bit 48
+         2    0.500000   0.005451    91.73     4231  000000000000:200000000000 -> bit 48
+         3    0.500000   0.005451    91.73      998  200000000000:000000000000 -> bit 48
+         4    0.024605   0.005451     4.51       18  000010000000:000000000000 -> bit 61
+         5    0.005330   0.005451     0.98        0  000000000080:000000000000 -> bit 40
+         6    0.004710   0.005451     0.86        0  000000000000:000008000000 -> bit 74
+
+-- 2. Search over 512 candidate differences (low weight + random) --
+   512 candidates: Hamming weight 1-2 plus random
+   rounds  3  best bias 0.500000  noise 0.011619  ratio 43.03  200000000000:000000000000 -> bit 48
+   rounds  4  best bias 0.022660  noise 0.011619  ratio  1.95  000010000000:000000000000 -> bit 55
+   rounds  5  best bias 0.010200  noise 0.011619  ratio  0.88  0b15025724c0:d22253b22092 -> bit 41
+   rounds  6  best bias 0.009900  noise 0.011619  ratio  0.85  93f5e883c81e:1a2af5071f1a -> bit 69
+   rounds  7  best bias 0.009180  noise 0.011619  ratio  0.79  000000000000:000400000001 -> bit 62
+   rounds  8  best bias 0.010340  noise 0.011619  ratio  0.89  054cd551ca51:d4507f190d23 -> bit 2
+
+-- 3. Scaling test -- the decisive check ---------------------
+   A real bias stays put as the sample grows; noise shrinks as
+   1/sqrt(n). We remeasure each candidate at n, 10n and 100n on
+   fresh seeds and look at how the value moves. This separates a
+   genuine characteristic from the maximum of 9216 noisy estimates,
+   which a single rerun cannot do.
+   source     rounds      bias@n    bias@10n   bias@100n    decay  verdict
+   single          1    0.500000    0.500000    0.500000     1.00  REAL BIAS
+   single          2    0.500000    0.500000    0.500000     1.00  REAL BIAS
+   single          3    0.500000    0.500000    0.500000     1.00  REAL BIAS
+   single          4    0.022000    0.022556    0.021130     1.04  REAL BIAS
+   single          5    0.000860    0.000672    0.000259     3.32  noise
+   single          6    0.000780    0.000466    0.000283     2.76  noise
+   searched        3    0.500000    0.500000    0.500000     1.00  REAL BIAS
+   searched        4    0.022660    0.020890    0.021027     1.08  REAL BIAS
+   searched        5    0.000280    0.000484    0.000241     1.16  noise
+   searched        6    0.000500    0.000872    0.000141     3.55  noise
+   searched        7    0.003640    0.000858    0.000040    91.46  noise
+   searched        8    0.003400    0.000162    0.000228    14.93  noise
+   decay ~10 means pure noise (shrinks as 1/sqrt(n));
+   decay ~1 with a value above the floor means a real bias
+   [NOTE] deepest CONFIRMED differential bias: round 4 of 16 (margin 12 rounds)
+
+-- 4. Exact differential probability for the round-3 structure --
+   after 3 Feistel rounds an input difference (0, d) forces L_out = d deterministically -- this is geometry, not weakness
+   rounds 2:  0 of 96 output bits are deterministic given input difference 000000000000:000000000001
+   rounds 3:  0 of 96 output bits are deterministic given input difference 000000000000:000000000001
+   rounds 4:  0 of 96 output bits are deterministic given input difference 000000000000:000000000001
+
+-- 5. Truncated (nibble-level) differentials -----------------
+   a nibble difference value never observed = impossible truncated differential
+   rounds 2:    138 of 9216 nibble differences never seen (random expectation 0.00e+00)
+   rounds 3:      0 of 9216 nibble differences never seen (random expectation 0.00e+00)
+   rounds 4:      0 of 9216 nibble differences never seen (random expectation 0.00e+00)
+   rounds 5:      0 of 9216 nibble differences never seen (random expectation 0.00e+00)
+   rounds 6:      0 of 9216 nibble differences never seen (random expectation 0.00e+00)
+
+-- 6. Differential-linear distinguisher ----------------------
+   input difference + output linear mask; often reaches deeper than a plain differential
+   rounds  3  max bias 0.001548  noise 0.002807  ratio  0.55
+   rounds  4  max bias 0.001955  noise 0.002807  ratio  0.70
+   rounds  5  max bias 0.001625  noise 0.002807  ratio  0.58
+   rounds  6  max bias 0.001305  noise 0.002807  ratio  0.46
+   rounds  7  max bias 0.002387  noise 0.002807  ratio  0.85
+   rounds  8  max bias 0.002323  noise 0.002807  ratio  0.83
+
+-- Verdict -- single-bit differential ------------------------
+    rounds   best deviation   noise floor  detected  witness
+         1         0.500000      0.005451       YES  000000000000:000000000001 -> bit 48
+         2         0.500000      0.005451       YES  000000000000:200000000000 -> bit 48
+         3         0.500000      0.005451       YES  200000000000:000000000000 -> bit 48
+         4         0.024605      0.005451       YES  000010000000:000000000000 -> bit 61
+         5         0.005330      0.005451        no  000000000080:000000000000 -> bit 40
+         6         0.004710      0.005451        no  000000000000:000008000000 -> bit 74
+   [NOTE] single-bit differential: last detected at round 4; margin 12 of 16 rounds
+
+-- Verdict -- searched differential --------------------------
+    rounds   best deviation   noise floor  detected  witness
+         3         0.500000      0.011619       YES  200000000000:000000000000 -> bit 48
+         4         0.022660      0.011619       YES  000010000000:000000000000 -> bit 55
+         5         0.010200      0.011619        no  0b15025724c0:d22253b22092 -> bit 41
+         6         0.009900      0.011619        no  93f5e883c81e:1a2af5071f1a -> bit 69
+         7         0.009180      0.011619        no  000000000000:000400000001 -> bit 62
+         8         0.010340      0.011619        no  054cd551ca51:d4507f190d23 -> bit 2
+   [NOTE] searched differential: last detected at round 4; margin 12 of 16 rounds
+
+-- Verdict -- differential-linear ----------------------------
+    rounds   best deviation   noise floor  detected  witness
+         3         0.001548      0.002807        no  mask #18
+         4         0.001955      0.002807        no  mask #16
+         5         0.001625      0.002807        no  mask #19
+         6         0.001305      0.002807        no  mask #25
+         7         0.002387      0.002807        no  mask #12
+         8         0.002323      0.002807        no  mask #23
+   [NOTE] differential-linear: nothing above the noise floor at any tested round count
+
+-- Security margin -------------------------------------------
+   single-bit differential            last detected round: 4
+   searched differential              last detected round: 4
+   differential-linear                last detected round: -
+   [NOTE] deepest distinguisher found: round 4 of 16   margin 12 rounds (75%)
+   Reminder: absence of a distinguisher here is NOT a security proof.
+   These are bounded searches, not exhaustive cryptanalysis.
+
+-- Interpretation --------------------------------------------
+   Rounds 1-3: deterministic relations are expected in ANY Feistel
+   network -- after r rounds one half is a known function of the
+   input halves. They are not an attack.
+   What matters is the first round where NO deviation exceeds the
+   noise floor, and how much margin the full 16 rounds leave.
+
+============================================================
+0 passed, 0 failed, 0 warnings   (66.8s)
+============================================================

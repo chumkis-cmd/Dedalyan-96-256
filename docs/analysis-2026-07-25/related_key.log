@@ -1,0 +1,113 @@
+============================================================
+Dedalyan related-key and rotational cryptanalysis
+============================================================
+   samples per configuration 300,000   processes 12
+
+-- 1. Related-key differentials through the full cipher ------
+   difference              r2        r3        r4        r5        r6        r7        r8
+   1 bit in K_0       0.00226   0.00281   0.00290   0.00308   0.00207   0.00314   0.00278
+   1 bit in K_3       0.00293   0.00232   0.00272   0.00220   0.00221   0.00218   0.00192
+   1 bit in K_L       0.00275   0.00249   0.00259   0.00289   0.00308   0.00264   0.00217
+   K_L all ones       0.00264   0.00211   0.00217   0.00254   0.00263   0.00230   0.00237
+   K_0 all ones       0.00234   0.00272   0.00274   0.00235   0.00292   0.00206   0.00256
+   everything         0.00242   0.00257   0.00205   0.00216   0.00192   0.00277   0.00314
+   alternating        0.00305   0.00252   0.00235   0.00216   0.00245   0.00252   0.00369
+   * marks a bias above the Bonferroni-corrected noise floor
+
+-- 2. How a key difference spreads through the schedule ------
+   this is the AES-256 failure mode: a difference that stays small
+   for several steps lets an attacker control the subkeys
+   difference           s-4     s-3     s-2     s-1      s0      s1      s2      s3      s4      s5   ...  s15
+   1 bit in K_0        4.9   13.6   27.9   39.6   47.8   50.0   49.9   50.1   49.7   49.9   ...   50.0
+   1 bit in K_3        4.3   12.7   27.3   38.0   47.6   49.2   50.1   50.2   50.2   50.0   ...   50.2
+   1 bit in K_L       50.0   49.8   50.1   49.8   50.4   50.0   50.2   50.3   49.9   49.8   ...   50.0
+   K_L all ones       50.4   49.5   49.8   49.9   50.0   49.5   50.0   50.1   50.3   49.6   ...   49.9
+   K_0 all ones       24.6   37.6   49.8   50.0   49.5   50.2   49.9   50.2   50.1   49.9   ...   49.5
+   values are % of the 192-bit schedule state that differs
+   50% from the first working step onwards is what we want to see
+
+-- 3. Related-key boomerang (the Biryukov-Khovratovich class) --
+   this is the attack that broke AES-256; a returned quartet rate
+   above 2^-96 would be a genuine break
+   dK = 1 bit, alpha = 1 bit    rounds  4       0 / 100,000 = 0.000e+00  (random 1.26e-29)
+   dK = 1 bit, alpha = 1 bit    rounds  6       0 / 100,000 = 0.000e+00  (random 1.26e-29)
+   dK = 1 bit, alpha = 1 bit    rounds  8       0 / 100,000 = 0.000e+00  (random 1.26e-29)
+   dK = K_L bit, alpha = 0      rounds  4       0 / 100,000 = 0.000e+00  (random 1.26e-29)
+   dK = K_L bit, alpha = 0      rounds  6       0 / 100,000 = 0.000e+00  (random 1.26e-29)
+   dK = K_L bit, alpha = 0      rounds  8       0 / 100,000 = 0.000e+00  (random 1.26e-29)
+   dK = 1 bit, alpha = 0        rounds  4       0 / 100,000 = 0.000e+00  (random 1.26e-29)
+   dK = 1 bit, alpha = 0        rounds  6       0 / 100,000 = 0.000e+00  (random 1.26e-29)
+   dK = 1 bit, alpha = 0        rounds  8       0 / 100,000 = 0.000e+00  (random 1.26e-29)
+
+-- 4. Rotational cryptanalysis -------------------------------
+   ARX ciphers can respect rotations: Pr[E(x<<<r) = E(x)<<<r] should
+   be 2^-96, and modular addition alone preserves rotations with
+   probability (1 + 2^-r + ...)/4 per operation, so constants matter
+    rot   key rotated   rounds      hits          rate
+      1         False        8         0     0.000e+00
+      1         False        8         0     0.000e+00
+      1          True        8         0     0.000e+00
+      1          True        8         0     0.000e+00
+      3         False        8         0     0.000e+00
+      3         False        8         0     0.000e+00
+      3          True        8         0     0.000e+00
+      3          True        8         0     0.000e+00
+      8         False        8         0     0.000e+00
+      8         False        8         0     0.000e+00
+      8          True        8         0     0.000e+00
+      8          True        8         0     0.000e+00
+     16         False        8         0     0.000e+00
+     16         False        8         0     0.000e+00
+     16          True        8         0     0.000e+00
+     16          True        8         0     0.000e+00
+     24         False        8         0     0.000e+00
+     24         False        8         0     0.000e+00
+     24          True        8         0     0.000e+00
+     24          True        8         0     0.000e+00
+
+-- 5. Rotational-XOR sanity ----------------------------------
+   RX-differences generalise rotational pairs by allowing a constant
+   XOR offset; the round constants RC_i are what should break them
+   [PASS] no round constant is invariant under rotation by 1   0 of 16
+   [PASS] no round constant is invariant under rotation by 3   0 of 16
+   [PASS] no round constant is invariant under rotation by 8   0 of 16
+   [PASS] gamma1 has no rotational symmetry
+   [PASS] delta has no rotational symmetry
+   [PASS] gamma2 has no rotational symmetry
+   [PASS] phi has no rotational symmetry
+
+-- Verdict -- related-key differential -----------------------
+    rounds   best deviation   noise floor  detected  witness
+         2         0.002987      0.003953        no  1 bit in K_L
+         3         0.002807      0.003953        no  1 bit in K_3
+         4         0.003080      0.003953        no  alternating
+         5         0.002827      0.003953        no  K_L all ones
+         6         0.002537      0.003953        no  K_L all ones
+         7         0.002497      0.003953        no  K_L all ones
+         8         0.003617      0.003953        no  K_0 all ones
+   [NOTE] related-key differential: nothing above the noise floor at any tested round count
+
+-- Verdict -- rotational -------------------------------------
+    rounds   best deviation   noise floor  detected  witness
+         4         0.000000      0.000020        no  rot 1
+         4         0.000000      0.000020        no  rot 1
+         4         0.000000      0.000020        no  rot 3
+         4         0.000000      0.000020        no  rot 3
+         4         0.000000      0.000020        no  rot 8
+         4         0.000000      0.000020        no  rot 8
+         4         0.000000      0.000020        no  rot 16
+         4         0.000000      0.000020        no  rot 16
+         4         0.000000      0.000020        no  rot 24
+         4         0.000000      0.000020        no  rot 24
+   [NOTE] rotational: nothing above the noise floor at any tested round count
+
+-- Security margin -------------------------------------------
+   related-key differential           last detected round: -
+   rotational                         last detected round: -
+   [NOTE] no distinguisher found at any tested round count
+   Reminder: absence of a distinguisher here is NOT a security proof.
+   These are bounded searches, not exhaustive cryptanalysis.
+
+============================================================
+7 passed, 0 failed, 0 warnings   (24.1s)
+============================================================
