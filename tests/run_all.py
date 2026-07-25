@@ -23,6 +23,7 @@ ROOT = HERE.parent
 TESTS = [
     ("vectors", "test_vectors.py", False),
     ("pitfalls", "test_pitfalls.py", False),
+    ("gcm", "test_gcm.py", False),
     ("roundtrip", "test_roundtrip.py", True),
     ("cross_c", "test_cross_c.py", True),
     ("avalanche", "test_avalanche.py", True),

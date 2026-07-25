@@ -21,8 +21,8 @@ else
   LIB = libdedalyan.so
 endif
 
-CORE = $(SRCDIR)/dedalyan.c $(SRCDIR)/kernels.c
-HDRS = $(SRCDIR)/dedalyan.h $(SRCDIR)/kernels.h
+CORE = $(SRCDIR)/dedalyan.c $(SRCDIR)/kernels.c $(SRCDIR)/gcm.c
+HDRS = $(SRCDIR)/dedalyan.h $(SRCDIR)/kernels.h $(SRCDIR)/gcm.h
 
 .PHONY: all test bench clean
 

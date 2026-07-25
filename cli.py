@@ -172,6 +172,51 @@ def cmd_keystream(args) -> int:
     return 0
 
 
+def cmd_seal(args) -> int:
+    """Аутентифицированное шифрование файла (GCM-96, кадрированный формат)."""
+    import dedalyan_file as F
+
+    if args.key_hex or args.key_file:
+        kw = {"key": parse_key(args)}
+    else:
+        import getpass
+        if args.password is not None:
+            pw = args.password
+        elif not sys.stdin.isatty():
+            raise SystemExit("ERROR: no key given and stdin is not a terminal;"
+                             " use --key-hex, --key-file or --password")
+        else:
+            pw = getpass.getpass("Password: ")
+            if args.mode == "seal" and pw != getpass.getpass("Repeat: "):
+                raise SystemExit("ERROR: passwords do not match")
+        kw = {"password": pw}
+
+    src, dst = Path(args.infile), Path(args.outfile)
+    if not src.is_file():
+        raise SystemExit(f"ERROR: {src} is not a file")
+
+    try:
+        if args.mode == "seal":
+            kw["chunk_size"] = args.chunk
+            n = F.encrypt_file(src, dst, overwrite=args.force, **kw)
+            extra = dst.stat().st_size - n
+            print(f"sealed {n} bytes -> {dst} (+{extra} bytes of header "
+                  f"and tags)", file=sys.stderr)
+        else:
+            n = F.decrypt_file(src, dst, overwrite=args.force, **kw)
+            print(f"opened {n} bytes -> {dst}", file=sys.stderr)
+    except FileExistsError as exc:
+        raise SystemExit(f"ERROR: {exc}")
+    except F.FileFormatError as exc:
+        raise SystemExit(f"ERROR: {exc}")
+    except F.AuthenticationError as exc:
+        # Отдельный код возврата: скрипт должен уметь отличить подделку
+        # от отсутствия файла или неверных аргументов.
+        print(f"REJECTED: {exc}", file=sys.stderr)
+        return 3
+    return 0
+
+
 def cmd_block(args) -> int:
     key = parse_key(args)
     rounds = args.rounds
@@ -261,6 +306,22 @@ def main(argv: Optional[list] = None) -> int:
         p.add_argument("--no-header", action="store_true",
                        help="do not store/read the counter in the file")
         p.set_defaults(mode=mode, func=cmd_crypt)
+
+    for mode, helptext in (
+            ("seal", "encrypt a file WITH authentication (GCM-96, recommended)"),
+            ("open", "decrypt and verify a sealed file")):
+        p = sub.add_parser(mode, help=helptext)
+        add_key_args(p)
+        p.add_argument("--password",
+                       help="password (Argon2id); prompts if no key is given")
+        p.add_argument("--in", dest="infile", required=True)
+        p.add_argument("--out", dest="outfile", required=True)
+        p.add_argument("--force", action="store_true",
+                       help="overwrite the output file if it exists")
+        if mode == "seal":
+            p.add_argument("--chunk", type=int, default=256 * 1024,
+                           help="plaintext frame size in bytes")
+        p.set_defaults(mode=mode, func=cmd_seal)
 
     p = sub.add_parser("keystream", help="write raw CTR keystream")
     add_key_args(p)

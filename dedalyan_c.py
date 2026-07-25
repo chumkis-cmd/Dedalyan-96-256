@@ -83,6 +83,17 @@ class Ctx(ctypes.Structure):
     _fields_ = [("rk", c_uint64 * 16), ("T", (c_uint8 * 16) * 2)]
 
 
+class Gf96(ctypes.Structure):
+    """Элемент GF(2^96): value = (hi << 32) | lo."""
+    _fields_ = [("hi", c_uint64), ("lo", c_uint32)]
+
+
+class GcmCtx(ctypes.Structure):
+    """dedalyan_gcm_ctx: шифр + таблицы GHASH."""
+    _fields_ = [("cipher", Ctx), ("M", Gf96 * 16), ("R4", Gf96 * 16),
+                ("H", Gf96)]
+
+
 U64P = POINTER(c_uint64)
 U32P = POINTER(c_uint32)
 U8P = POINTER(c_uint8)
@@ -182,6 +193,17 @@ class CBackend:
              [POINTER(Ctx), ctypes.c_uint, c_uint64, c_uint64, U8P, c_size_t]),
             ("ded_k_random_ecb", None,
              [POINTER(Ctx), ctypes.c_uint, c_size_t, c_uint64, U64P]),
+            # GCM
+            ("dedalyan_gcm_init", None, [POINTER(GcmCtx), U8P]),
+            ("dedalyan_gcm_wipe", None, [POINTER(GcmCtx)]),
+            ("dedalyan_gcm_mul_ref", None, [U8P, U8P, U8P]),
+            ("dedalyan_gcm_mul_h", None, [POINTER(GcmCtx), U8P, U8P]),
+            ("dedalyan_gcm_ghash", None,
+             [POINTER(GcmCtx), U8P, c_size_t, U8P]),
+            ("dedalyan_gcm_seal", c_int,
+             [POINTER(GcmCtx), U8P, U8P, c_size_t, U8P, U8P, c_size_t, U8P]),
+            ("dedalyan_gcm_open", c_int,
+             [POINTER(GcmCtx), U8P, U8P, c_size_t, U8P, U8P, c_size_t, U8P]),
         ]
         for name, restype, argtypes in sig:
             fn = getattr(L, name)
@@ -422,6 +444,82 @@ class CBackend:
         self.lib.ded_k_random_ecb(ctypes.byref(ctx), rounds, n, seed,
                                   out.ctypes.data_as(U64P))
         return out
+
+    # -- GCM ---------------------------------------------------------------
+
+    def gcm_new(self, key: bytes) -> GcmCtx:
+        """Контекст GCM: подключи шифра + таблицы GHASH."""
+        self._require()
+        if len(key) != 32:
+            raise ValueError("key must be 32 bytes")
+        ctx = GcmCtx()
+        self.lib.dedalyan_gcm_init(ctypes.byref(ctx),
+                                   (c_uint8 * 32).from_buffer_copy(key))
+        return ctx
+
+    def gcm_h(self, ctx: GcmCtx) -> int:
+        return (int(ctx.H.hi) << 32) | int(ctx.H.lo)
+
+    def gcm_mul_ref(self, x: bytes, y: bytes) -> bytes:
+        """Побитовое умножение в GF(2^96) -- медленный эталон."""
+        self._require()
+        out = (c_uint8 * 12)()
+        self.lib.dedalyan_gcm_mul_ref((c_uint8 * 12).from_buffer_copy(x),
+                                      (c_uint8 * 12).from_buffer_copy(y), out)
+        return bytes(out)
+
+    def gcm_mul_h(self, ctx: GcmCtx, x: bytes) -> bytes:
+        """Умножение на H через таблицы."""
+        self._require()
+        out = (c_uint8 * 12)()
+        self.lib.dedalyan_gcm_mul_h(ctypes.byref(ctx),
+                                    (c_uint8 * 12).from_buffer_copy(x), out)
+        return bytes(out)
+
+    def gcm_ghash(self, ctx: GcmCtx, data: bytes) -> bytes:
+        self._require()
+        if len(data) % 12:
+            raise ValueError("ghash input must be block-aligned")
+        buf = (c_uint8 * max(len(data), 1)).from_buffer_copy(data or b"\x00")
+        out = (c_uint8 * 12)()
+        self.lib.dedalyan_gcm_ghash(ctypes.byref(ctx), buf, len(data), out)
+        return bytes(out)
+
+    def gcm_seal(self, ctx: GcmCtx, nonce: bytes, plaintext: bytes,
+                 aad: bytes = b"") -> bytes:
+        """-> ciphertext ‖ tag (12 байт)."""
+        self._require()
+        n = len(plaintext)
+        out = (c_uint8 * max(n, 1))()
+        tag = (c_uint8 * 12)()
+        rc = self.lib.dedalyan_gcm_seal(
+            ctypes.byref(ctx), (c_uint8 * 8).from_buffer_copy(nonce),
+            (c_uint8 * max(len(aad), 1)).from_buffer_copy(aad or b"\x00"),
+            len(aad),
+            (c_uint8 * max(n, 1)).from_buffer_copy(plaintext or b"\x00"),
+            out, n, tag)
+        if rc != 0:
+            raise ValueError("message too long for the 32-bit block counter")
+        return bytes(out)[:n] + bytes(tag)
+
+    def gcm_open(self, ctx: GcmCtx, nonce: bytes, sealed: bytes,
+                 aad: bytes = b"") -> bytes:
+        """Проверяет тег и расшифровывает. Бросает ValueError при отказе."""
+        self._require()
+        if len(sealed) < 12:
+            raise ValueError("input shorter than the tag")
+        ct, tag = sealed[:-12], sealed[-12:]
+        n = len(ct)
+        out = (c_uint8 * max(n, 1))()
+        rc = self.lib.dedalyan_gcm_open(
+            ctypes.byref(ctx), (c_uint8 * 8).from_buffer_copy(nonce),
+            (c_uint8 * max(len(aad), 1)).from_buffer_copy(aad or b"\x00"),
+            len(aad),
+            (c_uint8 * max(n, 1)).from_buffer_copy(ct or b"\x00"),
+            out, n, (c_uint8 * 12).from_buffer_copy(tag))
+        if rc != 0:
+            raise ValueError("authentication failed")
+        return bytes(out)[:n]
 
 
 #: Единственный экземпляр, создаётся при импорте модуля.

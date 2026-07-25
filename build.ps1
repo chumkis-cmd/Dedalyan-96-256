@@ -62,7 +62,7 @@ if ($vcvars) {
     # /Fo с несколькими исходниками требует каталог: путь обязан
     # заканчиваться разделителем, а перед закрывающей кавычкой он удваивается.
     $cmds = @(
-        "cl /nologo /O2 /W3 /std:c11 /DNDEBUG /D_CRT_SECURE_NO_WARNINGS /DDEDALYAN_BUILD_DLL /LD dedalyan.c kernels.c /Fo`"$build\obj\dll\\`" /Fe`"$build\dedalyan.dll`" /link /IMPLIB:`"$build\dedalyan.lib`"",
+        "cl /nologo /O2 /W3 /std:c11 /DNDEBUG /D_CRT_SECURE_NO_WARNINGS /DDEDALYAN_BUILD_DLL /LD dedalyan.c kernels.c gcm.c /Fo`"$build\obj\dll\\`" /Fe`"$build\dedalyan.dll`" /link /IMPLIB:`"$build\dedalyan.lib`"",
         "cl /nologo /O2 /W3 /std:c11 /DNDEBUG /D_CRT_SECURE_NO_WARNINGS dedalyan.c kernels.c test_vectors.c /Fo`"$build\obj\tv\\`" /Fe`"$build\test_vectors.exe`"",
         "cl /nologo /O2 /W3 /std:c11 /DNDEBUG /D_CRT_SECURE_NO_WARNINGS dedalyan.c kernels.c bench.c /Fo`"$build\obj\bench\\`" /Fe`"$build\bench.exe`""
     )
@@ -103,13 +103,13 @@ else {
     }
 
     & $cc @flags @pic -shared -DDEDALYAN_BUILD_DLL `
-        (Join-Path $src 'dedalyan.c') (Join-Path $src 'kernels.c') `
+        (Join-Path $src 'dedalyan.c') (Join-Path $src 'kernels.c') (Join-Path $src 'gcm.c') `
         -o (Join-Path $build $lib)
     if ($LASTEXITCODE -ne 0) { throw "shared library build failed" }
-    & $cc @flags -I$src (Join-Path $src 'dedalyan.c') (Join-Path $src 'kernels.c') `
+    & $cc @flags -I$src (Join-Path $src 'dedalyan.c') (Join-Path $src 'kernels.c') (Join-Path $src 'gcm.c') `
         (Join-Path $src 'test_vectors.c') -o (Join-Path $build 'test_vectors.exe')
     if ($LASTEXITCODE -ne 0) { throw "test_vectors build failed" }
-    & $cc @flags -I$src (Join-Path $src 'dedalyan.c') (Join-Path $src 'kernels.c') `
+    & $cc @flags -I$src (Join-Path $src 'dedalyan.c') (Join-Path $src 'kernels.c') (Join-Path $src 'gcm.c') `
         (Join-Path $src 'bench.c') -o (Join-Path $build 'bench.exe')
     if ($LASTEXITCODE -ne 0) { throw "bench build failed" }
 }

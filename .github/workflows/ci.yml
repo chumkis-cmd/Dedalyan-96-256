@@ -89,3 +89,4 @@ jobs:
         run: |
           python tests/test_vectors.py
           python tests/test_pitfalls.py
+          python tests/test_gcm.py
